@@ -1,0 +1,25 @@
+package com.avgoi.schoolmgmt.tenant;
+
+import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
+import org.springframework.stereotype.Component;
+
+/**
+ * Resolves the current tenant schema name from TenantContext for Hibernate multi-tenancy.
+ * When no X-TenantID header is present, uses "public" schema.
+ */
+@Component
+public class TenantSchemaResolver implements CurrentTenantIdentifierResolver<String> {
+
+    private static final String DEFAULT_SCHEMA = "public";
+
+    @Override
+    public String resolveCurrentTenantIdentifier() {
+        String tenantId = TenantContext.getTenantId();
+        return (tenantId != null && !tenantId.isBlank()) ? tenantId : DEFAULT_SCHEMA;
+    }
+
+    @Override
+    public boolean validateExistingCurrentSessions() {
+        return true;
+    }
+}

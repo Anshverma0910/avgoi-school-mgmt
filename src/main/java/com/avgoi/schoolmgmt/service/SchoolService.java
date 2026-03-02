@@ -6,6 +6,8 @@ import com.avgoi.schoolmgmt.entity.School;
 import com.avgoi.schoolmgmt.repository.SchoolRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +20,11 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SchoolService {
 
     private final SchoolRepository schoolRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     /**
      * Registers a new school. Fails if registrationId is already in use.
@@ -38,7 +42,31 @@ public class SchoolService {
         school.setAddress(request.getAddress());
         school.setContactNumber(request.getContactNumber());
         school.setSettings(request.getSettings());
+        School saved = createSchemaIfNotExistsAndSave(school);
+        log.info("Created isolated schema for tenant: {}", request.getRegistrationId());
+        return saved;
+    }
+
+    /**
+     * Ensures tenant schema exists (same transaction as save) then saves the school.
+     * Schema name is cleaned to alphanumeric and underscores only for PostgreSQL.
+     */
+    private School createSchemaIfNotExistsAndSave(School school) {
+        String schemaName = toSchemaName(school.getRegistrationId());
+        if (!schemaName.isBlank()) {
+            jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+        }
         return schoolRepository.save(school);
+    }
+
+    /**
+     * Cleans registrationId to only alphanumeric and underscore (safe for PostgreSQL schema names).
+     */
+    private static String toSchemaName(String registrationId) {
+        if (registrationId == null || registrationId.isBlank()) {
+            return "";
+        }
+        return registrationId.replaceAll("[^a-zA-Z0-9_]", "_");
     }
 
     public List<School> getAllSchools() {
@@ -84,7 +112,9 @@ public class SchoolService {
             merged.putAll(request.getSettings());
             school.setSettings(merged);
         }
-        return schoolRepository.save(school);
+        School saved = createSchemaIfNotExistsAndSave(school);
+        log.info("Created isolated schema for tenant: {}", school.getRegistrationId());
+        return saved;
     }
 
     @Transactional
