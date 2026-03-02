@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: school_postgres
+    environment:
+      POSTGRES_DB: avgoi_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: school_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  redis:
+    image: redis:7
+    container_name: school_redis
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    container_name: school_app
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_URL=jdbc:postgresql://school_postgres:5432/avgoi_db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - RABBIT_HOST=school_rabbitmq
+      - REDIS_HOST=school_redis
+      - SPRING_AI_OPENAI_API_KEY=temporary_key
