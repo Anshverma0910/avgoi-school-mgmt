@@ -38,3 +38,17 @@ services:
       - RABBIT_HOST=school_rabbitmq
       - REDIS_HOST=school_redis
       - SPRING_AI_OPENAI_API_KEY=temporary_key
+
+  frontend:
+    build:
+      context: ../avgoi-frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+    container_name: school_frontend
+    depends_on:
+      - app
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080

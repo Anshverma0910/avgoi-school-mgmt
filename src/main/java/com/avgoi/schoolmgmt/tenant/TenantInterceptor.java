@@ -34,7 +34,7 @@ public class TenantInterceptor implements HandlerInterceptor {
         String tenantId = request.getHeader(TENANT_HEADER);
         String academicYear = request.getHeader(ACADEMIC_YEAR_HEADER);
 
-        if ((tenantId == null || tenantId.isBlank()) && !isSchoolRegistrationPost(request)) {
+        if ((tenantId == null || tenantId.isBlank()) && !isAllowedWithoutTenant(request)) {
             log.warn("Tenant guard: missing X-TenantID for {} {} -> 400 Bad Request",
                     request.getMethod(), request.getRequestURI());
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -59,8 +59,11 @@ public class TenantInterceptor implements HandlerInterceptor {
         TenantContext.clear();
     }
 
-    private static boolean isSchoolRegistrationPost(HttpServletRequest request) {
-        return "POST".equalsIgnoreCase(request.getMethod())
-                && "/api/schools".equals(request.getRequestURI());
+    private static boolean isAllowedWithoutTenant(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        if ("/api/schools".equals(path) && "POST".equalsIgnoreCase(request.getMethod())) return true;
+        if (path != null && path.startsWith("/api/auth/")) return true;
+        if ("/api/permissions".equals(path)) return true;
+        return false;
     }
 }
